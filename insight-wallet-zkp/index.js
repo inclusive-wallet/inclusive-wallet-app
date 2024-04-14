@@ -10,6 +10,7 @@ app.use(express.json()); // middleware to parse JSON request bodies
 app.post('/verify-transaction', async (req, res) => {
     //   const { loanAmount } = req.body;
 
+
     //   // Assume we have a predefined ZKP circuit and keys already set up
     //   // For simplicity, let's pretend we're verifying that loanAmount is non-negative
     //   const input = {
