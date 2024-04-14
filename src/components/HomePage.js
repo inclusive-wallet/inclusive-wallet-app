@@ -11,19 +11,10 @@ function HomePage() {
         Your trusted partner in decentralized finance. Unlock the potential of your financial freedom with
         our secure and innovative wallet solutions.
       </p>
-      <img src="/path-to-your-image/financial-image.jpg" alt="Financial Freedom" style={styles.featuredImage} />
       <div style={styles.buttonContainer}>
-        <Link to="/send-amount" style={{ ...styles.button, ...styles.viewButton }}>Send amount</Link>
+        <Link to="/market-place" style={{ ...styles.button, ...styles.viewButton }}> Market place</Link>
       </div>
-      <div style={styles.features}>
-        <h2 style={styles.featuresHeader}>Why Choose Us?</h2>
-        <ul style={styles.list}>
-          <li style={styles.listItem}>Instant movements</li>
-          <li style={styles.listItem}>Zero Hidden Fees</li>
-          <li style={styles.listItem}>Complete Anonymity with ZKP</li>
-          <li style={styles.listItem}>24/7 Support</li>
-        </ul>
-      </div>
+
     </div>
   );
 }
