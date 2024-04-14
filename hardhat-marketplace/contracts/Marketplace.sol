@@ -1,64 +1,124 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+import React, { useState, useEffect } from 'react';
+import { ethers, providers, utils } from 'ethers';
 
-contract Marketplace {
-    // Structure to hold details of the item
-    struct Item {
-        uint price;
-        address owner;
-        bool isForSale;
+const Marketplace = () => {
+  const [itemId, setItemId] = useState('');
+  const [price, setPrice] = useState('');
+  const [items, setItems] = useState([]);
+
+  const contractAddress = '0x6D4815798326bFfe3B140E1E468c3f13C086Cb00';
+  const contractABI = [
+    'event ItemListed(uint indexed itemId, uint price, address indexed owner)',
+    'event ItemPriceSet(uint indexed itemId, uint price, address indexed owner)',
+    'event ItemPurchased(uint indexed itemId, address indexed buyer, address indexed seller, uint price)',
+    'event OwnershipTransferred(uint indexed itemId, address indexed previousOwner, address indexed newOwner)',
+    'function listItem(uint price) public',
+    'function setItemPrice(uint itemId, uint price) public',
+    'function buyItem(uint itemId) public payable',
+    'function items(uint) public view returns (uint price, address owner, bool isForSale)',
+    'function totalItems() public view returns (uint)',
+  ];
+
+  const provider = new providers.Web3Provider(window.ethereum);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      const contract = new ethers.Contract(contractAddress, contractABI, provider);
+      const totalItems = await contract.totalItems();
+      const itemsArray = [];
+      for (let id = 0; id < totalItems; id++) {
+        const item = await contract.items(id);
+        itemsArray.push({
+          id,
+          price: utils.formatEther(item.price),
+          owner: item.owner,
+          isForSale: item.isForSale,
+        });
+      }
+      setItems(itemsArray);
+    };
+    fetchItems();
+  }, []);
+
+  async function listItem() {
+    if (!window.ethereum) {
+      alert('Please install MetaMask!');
+      return;
     }
 
-    // Mapping from item ID to item details
-    mapping(uint => Item) public items;
+    try {
+      await provider.send('eth_requestAccounts', []);
+      const signer = provider.getSigner();
+      const marketplaceContract = new ethers.Contract(contractAddress, contractABI, signer);
+      const transaction = await marketplaceContract.listItem(utils.parseEther(price));
+      await transaction.wait();
+      alert('Item listed successfully!');
+    } catch (error) {
+      console.error('Listing failed:', error);
+      alert('Listing failed!');
+    }
+  }
 
-    // Event declarations
-    event ItemPriceSet(uint indexed itemId, uint price, address indexed owner);
-    event ItemPurchased(uint indexed itemId, address indexed buyer, address indexed seller, uint price);
-    event OwnershipTransferred(uint indexed itemId, address indexed previousOwner, address indexed newOwner);
-
-    // Function to set the price of an item
-    function setItemPrice(uint itemId, uint price) public {
-        // Ensure the caller is the owner of the item or the item is not yet created
-        require(items[itemId].owner == msg.sender || items[itemId].owner == address(0), "Only the item owner can set the price.");
-
-        // Update the item's price and owner information
-        if(items[itemId].owner == address(0)) {
-            items[itemId].owner = msg.sender; // Set owner if new item
-        }
-        items[itemId].price = price;
-        items[itemId].isForSale = true;
-
-        // Emit the price set event
-        emit ItemPriceSet(itemId, price, msg.sender);
+  async function setItemPrice(itemId, newPrice) {
+    if (!window.ethereum) {
+      alert('Please install MetaMask!');
+      return;
     }
 
-    // Function to buy an item
-    function buyItem(uint itemId) public payable {
-        // Check if the item is for sale
-        require(items[itemId].isForSale, "This item is not for sale.");
-        // Check if enough funds were sent
-        require(msg.value >= items[itemId].price, "Insufficient funds sent.");
+    try {
+      await provider.send('eth_requestAccounts', []);
+      const signer = provider.getSigner();
+      const marketplaceContract = new ethers.Contract(contractAddress, contractABI, signer);
+      const transaction = await marketplaceContract.setItemPrice(itemId, utils.parseEther(newPrice));
+      await transaction.wait();
+      alert('Item price updated successfully!');
+    } catch (error) {
+      console.error('Price update failed:', error);
+      alert('Price update failed!');
+    }
+  }
 
-        // Get the seller's address before changing it
-        address seller = items[itemId].owner;
-
-        // Transfer ownership to the buyer
-        items[itemId].owner = msg.sender;
-        items[itemId].isForSale = false; // Item is no longer for sale after purchase
-
-        // Pay the seller the item's price
-        payable(seller).transfer(items[itemId].price);
-
-        // If any excess funds were sent, refund them to the buyer
-        if (msg.value > items[itemId].price) {
-            payable(msg.sender).transfer(msg.value - items[itemId].price);
-        }
-
-        // Emit the purchase and ownership transferred events
-        emit ItemPurchased(itemId, msg.sender, seller, items[itemId].price);
-        emit OwnershipTransferred(itemId, seller, msg.sender);
+  async function buyItem(itemId, price) {
+    if (!window.ethereum) {
+      alert('Please install MetaMask!');
+      return;
     }
 
+    try {
+      await provider.send('eth_requestAccounts', []);
+      const signer = provider.getSigner();
+      const marketplaceContract = new ethers.Contract(contractAddress, contractABI, signer);
+      const transaction = await marketplaceContract.buyItem(itemId, { value: utils.parseEther(price) });
+      await transaction.wait();
+      alert('Purchase successful!');
+    } catch (error) {
+      console.error('Purchase failed:', error);
+      alert('Purchase failed!');
+    }
+  }
 
-}
+  return (
+    <div>
+      <h1>Marketplace</h1>
+      <div>
+        <input type="text" value={itemId} onChange={(e) => setItemId(e.target.value)} placeholder="Enter Item ID for operations" />
+        <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Enter Price (in ETH) for listing or setting" />
+        <button onClick={() => listItem()}>List Item</button>
+        <button onClick={() => setItemPrice(itemId, price)}>Set Item Price</button>
+        <button onClick={() => buyItem(itemId, price)}>Buy Item</button>
+      </div>
+      <div>
+        <h2>Items for Sale</h2>
+        <ul>
+          {items.map((item) => (
+            <li key={item.id}>
+              Item ID: {item.id}, Price: {item.price} ETH, Owned by: {item.owner}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+export default Marketplace;
